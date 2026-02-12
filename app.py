@@ -8,7 +8,7 @@ import matplotlib.patches as patches
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Ishikawa Analytics Pro 4.0", page_icon="📊", layout="wide")
 
-# --- DISEÑO UX/UI ---
+# --- BARRA LATERAL (CONFIGURACIÓN) ---
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Claro.svg/1280px-Claro.svg.png", width=150)
     st.markdown("### 🎨 PERSONALIZACIÓN")
@@ -21,6 +21,7 @@ with st.sidebar:
     metodo = st.radio("Método de Entrada", ["Manual", "Subir Excel"])
     problema_input = st.text_area("Problema Principal", "CASOS PROACTIVOS (60)")
 
+# --- CSS DINÁMICO ---
 bg_presets = {
     "Cyber Dark": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
     "Deep Ocean": "linear-gradient(135deg, #000428, #004e92)",
@@ -34,8 +35,8 @@ st.markdown(f"<style>.stApp {{ background: {bg_presets[bg_style]}; color: {text_
 st.markdown('<h1 class="titulo-epico">ISHIKAWA ANALYTICS 4.0</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="autor">Creado por Ing. Dariel A. Peña</p>', unsafe_allow_html=True)
 
-# --- MOTOR GRÁFICO ---
-def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasif):
+# --- MOTOR GRÁFICO (CORREGIDO) ---
+def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasif, bg_type):
     num_cats = len(data_dict)
     fig_height = 10 + (num_cats * 1.5)
     fig, ax = plt.subplots(figsize=(18, fig_height), facecolor='none')
@@ -54,7 +55,7 @@ def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasi
     f_size_head = 11 if len(title) < 18 else 8
     ax.text(13.9, 0, title, fontsize=f_size_head, fontweight='black', color='black', ha='center', va='center', wrap=True)
 
-    # Espinas Orgánicas (Desde cabeza hacia atrás)
+    # Espinas Orgánicas (Inclinación \ desde cabeza hacia atrás)
     categorias = list(data_dict.keys())
     for i, cat in enumerate(categorias):
         is_top = i % 2 == 0
@@ -80,7 +81,7 @@ def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasi
                     ax.text(px - 0.7, py - (0.3 if is_top else -0.3) - ((m+1)*0.28 if is_top else -(m+1)*0.28), f"↳ {sub}", fontsize=7, color='#00d4ff', style='italic', alpha=0.9)
     return fig
 
-# --- LÓGICA DE CARGA DINÁMICA ---
+# --- LÓGICA DE DATOS ---
 data_final = {}
 if metodo == "Manual":
     if 'm_cats' not in st.session_state: st.session_state.m_cats = 2
@@ -109,23 +110,34 @@ else:
     file = st.file_uploader("Sube Excel", type=["xlsx"])
     if file:
         df = pd.read_excel(file)
-        # SOLUCIÓN DEFINITIVA: Leer por índice de columna, no por nombre
+        # Lectura por posición de columna para evitar errores de nombres
         if len(df.columns) >= 4:
-            for cl in df.iloc[:, 0].unique(): # Columna 1: Clasificación
+            for cl in df.iloc[:, 0].unique():
                 df_cl = df[df.iloc[:, 0] == cl]
                 dict_cl = {}
-                for cat_s in df_cl.iloc[:, 1].unique(): # Columna 2: Categoría
+                for cat_s in df_cl.iloc[:, 1].unique():
                     df_cat = df_cl[df_cl.iloc[:, 1] == cat_s]
                     dict_cau = {}
-                    for cau in df_cat.iloc[:, 2].unique(): # Columna 3: Causa
-                        dict_cau[cau] = df_cat[df_cat.iloc[:, 2] == cau].iloc[:, 3].dropna().tolist() # Columna 4: Sub-Causa
+                    for cau in df_cat.iloc[:, 2].unique():
+                        dict_cau[cau] = df_cat[df_cat.iloc[:, 2] == cau].iloc[:, 3].dropna().tolist()
                     dict_cl[cat_s] = dict_cau
                 data_final[cl] = dict_cl
         else:
-            st.error("⚠️ El Excel debe tener al menos 4 columnas: Clasificación, Categoría, Causa y Sub-Causa.")
+            st.error("⚠️ El Excel debe tener 4 columnas: Clasificación, Categoría, Causa y Sub-Causa.")
 
+# --- RENDERIZADO (LLAMADA CORREGIDA) ---
 if data_final:
+    st.markdown(f"### 📈 Dashboard de Análisis")
+    # Se pasan los 6 argumentos correctamente: data, title, c_lineas, c_text_causas, c_text_clasif, bg_type
     fig_master = draw_master_ishikawa(data_final, problema_input, tema_lineas, color_causas, color_clasif, bg_style)
     st.pyplot(fig_master, transparent=True)
-    buf = BytesIO(); fig_master.savefig(buf, format="png", dpi=300, transparent=True)
-    st.download_button("📥 DESCARGAR PNG", buf.getvalue(), "ishikawa.png", "image/png")
+    
+    col_d1, col_d2 = st.columns(2)
+    with col_d1:
+        b_png = BytesIO()
+        fig_master.savefig(b_png, format="png", dpi=300, transparent=True)
+        st.download_button("📥 DESCARGAR PNG", b_png.getvalue(), "ishikawa_pro.png", "image/png")
+    with col_d2:
+        b_svg = BytesIO()
+        fig_master.savefig(b_svg, format="svg", transparent=True)
+        st.download_button("✏️ DESCARGAR SVG (EDITABLE)", b_svg.getvalue(), "ishikawa_edit.svg", "image/svg+xml")
