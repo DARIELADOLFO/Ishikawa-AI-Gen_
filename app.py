@@ -31,7 +31,7 @@ st.markdown(f"""
     .stApp {{ background: {bg_presets[bg_style]}; color: {text_color}; }}
     .titulo-epico {{ font-family: 'Arial Black', sans-serif; color: {text_color}; font-size: 3rem; text-align: center; margin-bottom: 0px; }}
     .autor {{ text-align: right; font-size: 1.1rem; color: {tema_color}; font-weight: bold; margin-top: -10px; }}
-    .stButton>button {{ width: 100%; border-radius: 20px; }}
+    .stButton>button {{ width: 100%; border-radius: 20px; font-weight: bold; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -41,8 +41,11 @@ st.markdown(f'<p class="autor">Creado por Ing. Dariel A. Peña</p>', unsafe_allo
 # --- MOTOR GRÁFICO ---
 def draw_smart_ishikawa(data_dict, title, color_theme, bg_type):
     num_cats = len(data_dict)
-    fig_width = 14 + (num_cats * 0.5)
-    fig, ax = plt.subplots(figsize=(fig_width, 10), facecolor='none')
+    # Cálculo dinámico de altura para evitar solapamiento
+    max_causas = max([len([k for k in v.keys() if k != '_pct']) for v in data_dict.values()]) if data_dict else 1
+    fig_height = max(8, 6 + (max_causas * 0.8))
+    
+    fig, ax = plt.subplots(figsize=(15, fig_height), facecolor='none')
     ax.set_facecolor('none')
     ax.set_xlim(0, 14)
     ax.set_ylim(-6, 6)
@@ -57,17 +60,12 @@ def draw_smart_ishikawa(data_dict, title, color_theme, bg_type):
     tri_pts = np.array([[11.8, 2.2], [11.8, -2.2], [13.8, 0]])
     ax.add_patch(plt.Polygon(tri_pts, closed=True, facecolor='#d3d3d3', edgecolor=color_theme, lw=2, zorder=3))
     
-    # Auto-ajuste de fuente para el título
-    max_chars = max([len(s) for s in title.split('\n')])
-    if len(title) > 40 or max_chars > 15: font_size = 7
-    elif len(title) > 20: font_size = 9
-    else: font_size = 11
+    # Auto-ajuste de fuente
+    f_size = 11 if len(title) < 20 else 8
+    ax.text(12.5, 0, title, fontsize=f_size, fontweight='black', color='black', 
+            ha='center', va='center', wrap=True)
 
-    ax.text(12.5, 0, title, fontsize=font_size, fontweight='black', color='black', 
-            ha='center', va='center', wrap=True, linespacing=1.2)
-
-    # Distribución de Clasificaciones
-    categorias = [c for c in data_dict.keys()]
+    categorias = list(data_dict.keys())
     num_c = len(categorias)
     up_count = int(np.ceil(num_c / 2))
     x_positions = np.linspace(1.5, 10, up_count)
@@ -83,7 +81,6 @@ def draw_smart_ishikawa(data_dict, title, color_theme, bg_type):
                 fontsize=10, fontweight='bold', color='white', ha='center',
                 bbox=dict(facecolor=color_theme, edgecolor='white', boxstyle='round,pad=0.5'))
 
-        # Causas en Zig-Zag
         causas_dict = {k: v for k, v in data_dict[cat].items() if k != '_pct'}
         for j, (causa, subcausas) in enumerate(causas_dict.items()):
             r = (j + 1) / (len(causas_dict) + 1)
@@ -101,43 +98,36 @@ def draw_smart_ishikawa(data_dict, title, color_theme, bg_type):
                             arrowprops=dict(arrowstyle='->', color='#00d4ff', lw=0.5, alpha=0.7), ha='center')
     return fig
 
-# --- LÓGICA DE DATOS SEGMENTADA ---
+# --- LÓGICA DE DATOS ---
 data_final = {}
-
 if metodo == "Manual":
-    if 'num_categorias' not in st.session_state: st.session_state.num_categorias = 3
+    if 'num_cats' not in st.session_state: st.session_state.num_cats = 3
     
-    col_add, col_rem = st.columns(2)
-    with col_add:
-        if st.button("➕ Añadir Clasificación"): st.session_state.num_categorias += 1
-    with col_rem:
-        if st.button("➖ Quitar Clasificación") and st.session_state.num_categorias > 1: st.session_state.num_categorias -= 1
+    c_btn1, c_btn2 = st.columns(2)
+    with c_btn1:
+        if st.button("➕ Clasificación"): st.session_state.num_cats += 1
+    with c_btn2:
+        if st.button("➖ Clasificación") and st.session_state.num_cats > 1: st.session_state.num_cats -= 1
 
-    for i in range(st.session_state.num_categorias):
+    for i in range(st.session_state.num_cats):
         with st.expander(f"📁 CLASIFICACIÓN #{i+1}", expanded=True):
-            nombre_cat = st.text_input(f"Nombre de Clasificación", f"CATEGORÍA {i+1}", key=f"cat_{i}")
+            n_cat = st.text_input(f"Nombre", f"CATEGORÍA {i+1}", key=f"cname_{i}")
+            k_c = f"n_causas_{i}"
+            if k_c not in st.session_state: st.session_state[k_c] = 1
             
-            # Gestión de causas por categoría
-            key_causas = f"count_causas_{i}"
-            if key_causas not in st.session_state: st.session_state[key_causas] = 1
+            c_temp = {}
+            for j in range(st.session_state[k_c]):
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    n_causa = st.text_input(f"Causa {j+1}", f"Causa {j+1}", key=f"caus_{i}_{j}")
+                with col2:
+                    s_raw = st.text_input(f"Sub-Causas (comas)", "", key=f"subr_{i}_{j}")
+                if n_causa: c_temp[n_causa] = [s.strip() for s in s_raw.split(",") if s.strip()]
             
-            causas_temp = {}
-            for j in range(st.session_state[key_causas]):
-                c_col1, c_col2 = st.columns([1, 2])
-                with c_col1:
-                    nombre_causa = st.text_input(f"Causa {j+1}", f"Causa {j+1}", key=f"causa_{i}_{j}")
-                with c_col2:
-                    subs_raw = st.text_input(f"Sub-Causas (separar por coma)", "", key=f"subs_{i}_{j}")
-                
-                if nombre_causa:
-                    causas_temp[nombre_causa] = [s.strip() for s in subs_raw.split(",") if s.strip()]
-            
-            if st.button(f"➕ Añadir Causa a {nombre_cat}", key=f"btn_causa_{i}"):
-                st.session_state[key_causas] += 1
+            if st.button(f"➕ Causa a {n_cat}", key=f"bc_{i}"):
+                st.session_state[k_c] += 1
                 st.rerun()
-            
-            data_final[nombre_cat] = {'_pct': 100/st.session_state.num_categorias, **causas_temp}
-
+            data_final[n_cat] = {'_pct': 100/st.session_state.num_cats, **c_temp}
 else:
     file = st.file_uploader("Sube Excel", type=["xlsx"])
     if file:
@@ -148,12 +138,20 @@ else:
             for causa in df_cat['Causa'].unique():
                 data_final[cat][causa] = df_cat[df_cat['Causa'] == causa]['Sub-Causa'].dropna().tolist()
 
-# --- RENDER ---
+# --- RENDER Y DESCARGA ---
 if data_final:
-    st.markdown(f"### 🔍 Vista Previa: {problema_input}")
+    st.markdown(f"### 🔍 Vista del Análisis")
     fig_ish = draw_smart_ishikawa(data_final, problema_input, tema_color, bg_style)
     st.pyplot(fig_ish, transparent=True)
     
-    buf = BytesIO()
-    fig_ish.savefig(buf, format="png", dpi=300, transparent=True)
-    st.download_button("📥 DESCARGAR ISHIKAWA PRO", buf.getvalue(), "ishikawa_pro.png", "image/png")
+    d_col1, d_col2 = st.columns(2)
+    with d_col1:
+        buf_png = BytesIO()
+        fig_ish.savefig(buf_png, format="png", dpi=300, transparent=True)
+        st.download_button("📥 DESCARGAR PNG (Imagen)", buf_png.getvalue(), "ishikawa.png", "image/png")
+    with d_col2:
+        buf_svg = BytesIO()
+        fig_ish.savefig(buf_svg, format="svg", transparent=True)
+        st.download_button("✏️ DESCARGAR SVG (Editable)", buf_svg.getvalue(), "ishikawa_editable.svg", "image/svg+xml")
+else:
+    st.info("💡 Configura los datos para generar el diagrama.")
