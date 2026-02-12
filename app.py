@@ -8,12 +8,12 @@ import matplotlib.patches as patches
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Ishikawa Analytics Pro 4.0", page_icon="📊", layout="wide")
 
-# --- BARRA LATERAL ---
+# --- DISEÑO UX/UI ---
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Claro.svg/1280px-Claro.svg.png", width=150)
     st.markdown("### 🎨 PERSONALIZACIÓN")
     bg_style = st.selectbox("Estilo de Fondo", ["Cyber Dark", "Deep Ocean", "Soft Gray", "Claro Red"])
-    tema_lineas = st.color_picker("Color de Espinas/Flechas", "#EF3829")
+    tema_lineas = st.color_picker("Color de Espinas", "#EF3829")
     color_clasif = st.color_picker("Color de Clasificaciones", "#FFFFFF")
     color_causas = st.color_picker("Color de Texto (Causas)", "#00D4FF")
     
@@ -21,7 +21,6 @@ with st.sidebar:
     metodo = st.radio("Método de Entrada", ["Manual", "Subir Excel"])
     problema_input = st.text_area("Problema Principal", "CASOS PROACTIVOS (60)")
 
-# --- CSS DINÁMICO ---
 bg_presets = {
     "Cyber Dark": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
     "Deep Ocean": "linear-gradient(135deg, #000428, #004e92)",
@@ -30,19 +29,13 @@ bg_presets = {
 }
 text_base = "white" if bg_style != "Soft Gray" else "#262730"
 
-st.markdown(f"""
-    <style>
-    .stApp {{ background: {bg_presets[bg_style]}; color: {text_base}; }}
-    .titulo-epico {{ font-family: 'Arial Black', sans-serif; color: {text_base}; font-size: 3rem; text-align: center; margin-bottom: 0px; }}
-    .autor {{ text-align: right; font-size: 1.1rem; color: #EF3829; font-weight: bold; margin-top: -10px; }}
-    </style>
-    """, unsafe_allow_html=True)
+st.markdown(f"<style>.stApp {{ background: {bg_presets[bg_style]}; color: {text_base}; }} .titulo-epico {{ font-family: 'Arial Black', sans-serif; color: {text_base}; font-size: 3rem; text-align: center; }} .autor {{ text-align: right; font-size: 1.1rem; color: #EF3829; font-weight: bold; }}</style>", unsafe_allow_html=True)
 
 st.markdown('<h1 class="titulo-epico">ISHIKAWA ANALYTICS 4.0</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="autor">Creado por Ing. Dariel A. Peña</p>', unsafe_allow_html=True)
 
 # --- MOTOR GRÁFICO ---
-def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasif, bg_type):
+def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasif):
     num_cats = len(data_dict)
     fig_height = 10 + (num_cats * 1.5)
     fig, ax = plt.subplots(figsize=(18, fig_height), facecolor='none')
@@ -51,121 +44,88 @@ def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasi
     ax.set_ylim(-8, 8)
     ax.axis('off')
 
-    # 1. Espina Dorsal
+    # Espina Dorsal
     ax.plot([0, 13], [0, 0], color=c_lineas, lw=4, zorder=1)
 
-    # 2. CABEZA (Bordes redondeados + Auto-ajuste de texto)
-    box_head = patches.FancyBboxPatch((12.5, -1.8), 2.5, 3.6, boxstyle="round,pad=0.2", 
-                                      ec=c_lineas, fc="#d3d3d3", lw=2, zorder=3)
+    # Cabeza Cuadrada Redondeada
+    box_head = patches.FancyBboxPatch((12.5, -1.8), 2.8, 3.6, boxstyle="round,pad=0.2", ec=c_lineas, fc="#d3d3d3", lw=2, zorder=3)
     ax.add_patch(box_head)
     
     f_size_head = 11 if len(title) < 18 else 8
-    ax.text(13.75, 0, title, fontsize=f_size_head, fontweight='black', color='black', 
-            ha='center', va='center', wrap=True)
+    ax.text(13.9, 0, title, fontsize=f_size_head, fontweight='black', color='black', ha='center', va='center', wrap=True)
 
-    # 3. Dibujo de Espinas (Hacia atrás desde la cabeza)
+    # Espinas Orgánicas (Desde cabeza hacia atrás)
     categorias = list(data_dict.keys())
     for i, cat in enumerate(categorias):
         is_top = i % 2 == 0
         x_base = 11.5 - (int(i/2) * 3.8)
-        y_fin = 6.5 if is_top else -6.5
-        x_fin = x_base - 2.8 # Inclinación \
+        y_fin, x_fin = (6.5 if is_top else -6.5), (x_base - 2.8)
         
         ax.plot([x_base, x_fin], [0, y_fin], color=c_lineas, lw=3, alpha=0.9)
-        ax.text(x_fin, y_fin + (0.5 if is_top else -0.8), cat, 
-                fontsize=12, fontweight='bold', color=c_text_clasif, ha='center',
-                bbox=dict(facecolor=c_lineas, edgecolor='white', boxstyle='round,pad=0.4'))
+        ax.text(x_fin, y_fin + (0.5 if is_top else -0.8), cat, fontsize=12, fontweight='bold', color=c_text_clasif, ha='center', bbox=dict(facecolor=c_lineas, edgecolor='white', boxstyle='round,pad=0.4'))
 
-        # 4. Jerarquía: Categoría -> Causa -> Sub-causa
-        causas_dict = {k: v for k, v in data_dict[cat].items() if k != '_pct'}
-        for j, (cat_secundaria, causas_list) in enumerate(causas_dict.items()):
-            r = (j + 1) / (len(causas_dict) + 1)
+        # Jerarquía: Categoría -> Causa -> Sub-causa
+        cats_sec = {k: v for k, v in data_dict[cat].items() if k != '_pct'}
+        for j, (c_sec, causas_list) in enumerate(cats_sec.items()):
+            r = (j + 1) / (len(cats_sec) + 1)
             cx, cy = x_base + (x_fin - x_base) * r, 0 + (y_fin - 0) * r
+            ax.plot([cx, cx - 1.6], [cy, cy], color=c_lineas, lw=1.5, alpha=0.7)
+            ax.text(cx - 1.7, cy, c_sec, fontsize=9, color=c_text_causas, ha='right', va='center', fontweight='bold')
             
-            len_h = 1.6
-            ax.plot([cx, cx - len_h], [cy, cy], color=c_lineas, lw=1.5, alpha=0.7)
-            ax.text(cx - (len_h + 0.1), cy, cat_secundaria, fontsize=9, color=c_text_causas, 
-                    ha='right', va='center', fontweight='bold')
-            
-            # Causas y Sub-causas
-            for k, (causa_txt, subs) in enumerate(causas_list.items()):
+            for k, (cau_txt, subs) in enumerate(causas_list.items()):
                 px, py = cx - 0.7, cy
-                # Pequeña flecha de causa
                 ax.plot([px, px - 0.4], [py, py - (0.3 if is_top else -0.3)], color=c_lineas, lw=1)
-                ax.text(px - 0.5, py - (0.3 if is_top else -0.3), causa_txt, 
-                        fontsize=8, color=c_text_causas, ha='right')
-                
+                ax.text(px - 0.5, py - (0.3 if is_top else -0.3), cau_txt, fontsize=8, color=c_text_causas, ha='right')
                 for m, sub in enumerate(subs):
-                    ax.text(px - 0.7, py - (0.3 if is_top else -0.3) - ((m+1)*0.28 if is_top else -(m+1)*0.28),
-                            f"↳ {sub}", fontsize=7, color='#00d4ff', style='italic', alpha=0.9)
+                    ax.text(px - 0.7, py - (0.3 if is_top else -0.3) - ((m+1)*0.28 if is_top else -(m+1)*0.28), f"↳ {sub}", fontsize=7, color='#00d4ff', style='italic', alpha=0.9)
     return fig
 
-# --- LÓGICA DE DATOS ---
+# --- LÓGICA DE CARGA DINÁMICA ---
 data_final = {}
-
 if metodo == "Manual":
     if 'm_cats' not in st.session_state: st.session_state.m_cats = 2
-    
     c1, c2 = st.columns(2)
-    with c1:
+    with c1: 
         if st.button("➕ Clasificación"): st.session_state.m_cats += 1
-    with c2:
+    with c2: 
         if st.button("➖ Clasificación") and st.session_state.m_cats > 1: st.session_state.m_cats -= 1
-
     for i in range(st.session_state.m_cats):
         with st.expander(f"📦 CLASIFICACIÓN #{i+1}", expanded=True):
-            n_cat = st.text_input("Nombre Clasificación", f"Clasificación {i+1}", key=f"nc_{i}")
+            n_cat = st.text_input("Nombre", f"Clasificación {i+1}", key=f"nc_{i}")
             k_sec = f"n_sec_{i}"
             if k_sec not in st.session_state: st.session_state[k_sec] = 1
-            
-            dict_secundario = {}
+            d_sec = {}
             for j in range(st.session_state[k_sec]):
                 st.markdown("---")
-                c_sec = st.text_input(f"Categoría Secundaria {j+1}", f"Cat {j+1}", key=f"sec_{i}_{j}")
-                c_cau = st.text_input(f"Causa para {c_sec}", "Causa X", key=f"cau_{i}_{j}")
-                c_sub = st.text_input(f"Sub-causas (comas)", "", key=f"sub_{i}_{j}")
-                if c_sec:
-                    dict_secundario[c_sec] = {c_cau: [s.strip() for s in c_sub.split(",") if s.strip()]}
-            
+                s_sec = st.text_input(f"Categoría Secundaria {j+1}", f"Cat {j+1}", key=f"sec_{i}_{j}")
+                s_cau = st.text_input(f"Causa", "Causa X", key=f"cau_{i}_{j}")
+                s_sub = st.text_input(f"Sub-causas (comas)", "", key=f"sub_{i}_{j}")
+                if s_sec: d_sec[s_sec] = {s_cau: [s.strip() for s in s_sub.split(",") if s.strip()]}
             if st.button(f"➕ Categoría a {n_cat}", key=f"bsec_{i}"):
                 st.session_state[k_sec] += 1
                 st.rerun()
-            data_final[n_cat] = dict_secundario
-
+            data_final[n_cat] = d_sec
 else:
     file = st.file_uploader("Sube Excel", type=["xlsx"])
     if file:
         df = pd.read_excel(file)
-        # LIMPIEZA DE COLUMNAS PARA EVITAR KEYERROR
-        df.columns = [str(c).strip().upper() for c in df.columns]
-        req = ['CLASIFICACION', 'CATEGORIA', 'CAUSA', 'SUB_CAUSA']
-        
-        if all(col in df.columns for col in req):
-            for cl in df['CLASIFICACION'].unique():
-                df_cl = df[df['CLASIFICACION'] == cl]
+        # SOLUCIÓN DEFINITIVA: Leer por índice de columna, no por nombre
+        if len(df.columns) >= 4:
+            for cl in df.iloc[:, 0].unique(): # Columna 1: Clasificación
+                df_cl = df[df.iloc[:, 0] == cl]
                 dict_cl = {}
-                for cat_s in df_cl['CATEGORIA'].unique():
-                    df_cat = df_cl[df_cl['CATEGORIA'] == cat_s]
+                for cat_s in df_cl.iloc[:, 1].unique(): # Columna 2: Categoría
+                    df_cat = df_cl[df_cl.iloc[:, 1] == cat_s]
                     dict_cau = {}
-                    for cau in df_cat['CAUSA'].unique():
-                        dict_cau[cau] = df_cat[df_cat['CAUSA'] == cau]['SUB_CAUSA'].dropna().tolist()
+                    for cau in df_cat.iloc[:, 2].unique(): # Columna 3: Causa
+                        dict_cau[cau] = df_cat[df_cat.iloc[:, 2] == cau].iloc[:, 3].dropna().tolist() # Columna 4: Sub-Causa
                     dict_cl[cat_s] = dict_cau
                 data_final[cl] = dict_cl
         else:
-            st.error(f"⚠️ El Excel debe tener estas columnas: {', '.join(req)}")
+            st.error("⚠️ El Excel debe tener al menos 4 columnas: Clasificación, Categoría, Causa y Sub-Causa.")
 
-# --- RENDER FINAL ---
 if data_final:
-    st.markdown(f"### 📈 Dashboard de Análisis")
     fig_master = draw_master_ishikawa(data_final, problema_input, tema_lineas, color_causas, color_clasif, bg_style)
     st.pyplot(fig_master, transparent=True)
-    
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        b_png = BytesIO()
-        fig_master.savefig(b_png, format="png", dpi=300, transparent=True)
-        st.download_button("📥 DESCARGAR PNG", b_png.getvalue(), "ishikawa_pro.png", "image/png")
-    with col_d2:
-        b_svg = BytesIO()
-        fig_master.savefig(b_svg, format="svg", transparent=True)
-        st.download_button("✏️ DESCARGAR SVG (EDITABLE)", b_svg.getvalue(), "ishikawa_edit.svg", "image/svg+xml")
+    buf = BytesIO(); fig_master.savefig(buf, format="png", dpi=300, transparent=True)
+    st.download_button("📥 DESCARGAR PNG", buf.getvalue(), "ishikawa.png", "image/png")
