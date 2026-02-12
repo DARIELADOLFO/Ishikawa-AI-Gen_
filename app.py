@@ -36,137 +36,163 @@ st.markdown(f"<style>.stApp {{ background: {bg_presets[bg_style]}; color: {text_
 st.markdown('<h1 class="titulo-epico">ISHIKAWA ANALYTICS 4.0</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="autor">Creado por Ing. Dariel A. Peña</p>', unsafe_allow_html=True)
 
-# --- MOTOR GRÁFICO OPTIMIZADO ---
+# --- MOTOR GRÁFICO OPTIMIZADO (ESTILO PROFESIONAL) ---
 def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasif, c_subs):
     num_cats = len(data_dict)
-    # Cálculo dinámico de altura basado en contenido
-    max_items = max([sum([len(causas_dict) for causas_dict in cat_data.values()]) for cat_data in data_dict.values()] or [1])
-    fig_height = max(12, 10 + (max_items * 0.4))
     
-    fig, ax = plt.subplots(figsize=(20, fig_height), facecolor='none')
+    # Cálculo dinámico de altura
+    max_items = max([sum([len(causas_dict) for causas_dict in cat_data.values()]) for cat_data in data_dict.values()] or [1])
+    fig_height = max(14, 12 + (max_items * 0.3))
+    
+    fig, ax = plt.subplots(figsize=(22, fig_height), facecolor='none')
     ax.set_facecolor('none')
-    ax.set_xlim(-2, 17)
-    ax.set_ylim(-10, 10)
+    ax.set_xlim(-1, 18)
+    ax.set_ylim(-12, 12)
     ax.axis('off')
 
-    # 1. ESPINA DORSAL - Anclada exactamente al cuadro
+    # 1. ESPINA DORSAL - Línea principal
     spine_start_x = 0
-    spine_end_x = 12.5
-    ax.plot([spine_start_x, spine_end_x], [0, 0], color=c_lineas, lw=4.5, zorder=1, solid_capstyle='butt')
+    spine_end_x = 13.5
+    ax.plot([spine_start_x, spine_end_x], [0, 0], color=c_lineas, lw=5, zorder=1, solid_capstyle='butt')
 
-    # 2. CABEZA (Box) - Perfectamente alineada
-    box_width = 3.2
-    box_height = 3.6
-    box_head = patches.FancyBboxPatch(
-        (spine_end_x, -box_height/2), 
-        box_width, 
-        box_height, 
-        boxstyle="round,pad=0.2", 
-        ec=c_lineas, 
-        fc="#d3d3d3", 
-        lw=2.5, 
-        zorder=3
-    )
-    ax.add_patch(box_head)
-    ax.text(spine_end_x + box_width/2, 0, title, 
-            fontsize=10, fontweight='black', color='black', 
+    # 2. CABEZA (Flecha/Box) - Estilo profesional
+    box_width = 3.8
+    box_height = 4.0
+    head_x = spine_end_x
+    
+    # Crear polígono de flecha como en la imagen
+    arrow_points = np.array([
+        [head_x, box_height/2],
+        [head_x + box_width - 1, box_height/2],
+        [head_x + box_width, 0],
+        [head_x + box_width - 1, -box_height/2],
+        [head_x, -box_height/2],
+        [head_x, box_height/2]
+    ])
+    
+    arrow_head = patches.Polygon(arrow_points, closed=True, 
+                                  ec=c_lineas, fc='#888888', 
+                                  lw=2.5, zorder=3)
+    ax.add_patch(arrow_head)
+    
+    ax.text(head_x + box_width/2, 0, title, 
+            fontsize=11, fontweight='black', color='white', 
             ha='center', va='center', wrap=True, zorder=4)
 
     categorias = list(data_dict.keys())
     
+    # DISTRIBUCIÓN DE CATEGORÍAS: De la cabeza hacia la cola
     for i, cat in enumerate(categorias):
         is_top = i % 2 == 0
         
-        # Distribución equitativa de clasificaciones a lo largo de la espina
-        segment_width = spine_end_x / ((num_cats + 1) / 2)
-        x_base = spine_end_x - ((i // 2 + 1) * segment_width)
+        # Las categorías se distribuyen de derecha (cabeza) a izquierda (cola)
+        # Primera categoría cerca de la cabeza, última cerca de la cola
+        spacing = spine_end_x / (num_cats // 2 + 1)
+        
+        if i < 2:  # Primeras dos categorías (arriba y abajo) cerca de la cabeza
+            x_base = spine_end_x - spacing
+        else:
+            x_base = spine_end_x - ((i // 2 + 1) * spacing)
         
         # Coordenadas de la espina principal de clasificación
-        y_fin = 7.5 if is_top else -7.5
-        x_fin = x_base - 3.5
+        spine_length = 5.5
+        angle = 50  # Ángulo de inclinación en grados
+        
+        if is_top:
+            x_fin = x_base - spine_length * np.cos(np.radians(angle))
+            y_fin = spine_length * np.sin(np.radians(angle))
+        else:
+            x_fin = x_base - spine_length * np.cos(np.radians(angle))
+            y_fin = -spine_length * np.sin(np.radians(angle))
         
         # ESPINA PRINCIPAL DE CLASIFICACIÓN
-        ax.plot([x_base, x_fin], [0, y_fin], color=c_lineas, lw=3.2, alpha=0.95, zorder=2)
+        ax.plot([x_base, x_fin], [0, y_fin], color=c_lineas, lw=3.5, alpha=0.95, zorder=2)
         
-        # Etiqueta de Clasificación
-        label_y = y_fin + (0.6 if is_top else -0.9)
-        ax.text(x_fin, label_y, cat, 
-                fontsize=12, fontweight='bold', color=c_text_clasif, 
+        # Etiqueta de Clasificación (en recuadro de color)
+        label_offset = 0.8 if is_top else -0.8
+        
+        # Crear recuadro de color para la clasificación
+        bbox_clasif = dict(
+            facecolor=c_lineas if i % 4 < 2 else '#6B4C9A',  # Alternar colores
+            edgecolor='white', 
+            boxstyle='round,pad=0.6', 
+            alpha=0.9,
+            linewidth=2
+        )
+        
+        ax.text(x_fin, y_fin + label_offset, cat, 
+                fontsize=11, fontweight='bold', color=c_text_clasif, 
                 ha='center', va='center',
-                bbox=dict(facecolor=c_lineas, edgecolor='white', 
-                         boxstyle='round,pad=0.5', alpha=0.9),
+                bbox=bbox_clasif,
                 zorder=5)
 
-        # 3. PROCESAMIENTO DE CATEGORÍAS SECUNDARIAS (AGRUPADAS)
+        # 3. PROCESAMIENTO DE CATEGORÍAS SECUNDARIAS
         cat_secundarias = data_dict[cat]
         num_secundarias = len(cat_secundarias)
         
         for j, (nombre_sec, causas_dict) in enumerate(cat_secundarias.items()):
-            # Distribución proporcional a lo largo de la espina de clasificación
+            # Distribución uniforme a lo largo de la espina
             ratio = (j + 1) / (num_secundarias + 1)
             cx = x_base + (x_fin - x_base) * ratio
             cy = 0 + (y_fin - 0) * ratio
             
-            # LÍNEA DE CATEGORÍA SECUNDARIA (horizontal)
-            len_horizontal = 2.2
-            sec_end_x = cx - len_horizontal if is_top else cx - len_horizontal
+            # LÍNEA DE CATEGORÍA SECUNDARIA (perpendicular a la espina)
+            sec_length = 3.5
             
-            ax.plot([cx, sec_end_x], [cy, cy], 
-                   color=c_lineas, lw=2, alpha=0.85, zorder=2)
+            # Calcular perpendicular a la espina principal
+            if is_top:
+                sec_end_x = cx - sec_length * np.cos(np.radians(angle - 90))
+                sec_end_y = cy - sec_length * np.sin(np.radians(angle - 90))
+            else:
+                sec_end_x = cx - sec_length * np.cos(np.radians(angle + 90))
+                sec_end_y = cy + sec_length * np.sin(np.radians(angle + 90))
+            
+            ax.plot([cx, sec_end_x], [cy, sec_end_y], 
+                   color=c_lineas, lw=2.2, alpha=0.85, zorder=2)
             
             # Etiqueta de Categoría Secundaria
-            text_x = sec_end_x - 0.15
-            ax.text(text_x, cy, nombre_sec, 
-                   fontsize=9.5, color=c_text_causas, 
-                   ha='right', va='center', fontweight='bold',
-                   bbox=dict(facecolor='black', alpha=0.3, 
-                            boxstyle='round,pad=0.3', edgecolor=c_lineas),
+            label_shift = 0.3 if is_top else -0.3
+            ax.text(sec_end_x, sec_end_y + label_shift, nombre_sec, 
+                   fontsize=10, color=c_text_causas, 
+                   ha='center', va='center', fontweight='bold',
+                   bbox=dict(facecolor='black', alpha=0.4, 
+                            boxstyle='round,pad=0.35', edgecolor=c_lineas),
                    zorder=4)
             
-            # 4. DISTRIBUCIÓN INTELIGENTE DE CAUSAS (ALGORITMO ANTI-SOLAPAMIENTO)
+            # 4. DISTRIBUCIÓN DE CAUSAS (UNIFORME Y ORGANIZADA)
             causas_items = list(causas_dict.items())
             num_causas = len(causas_items)
             
-            # Espaciado vertical adaptativo
-            vertical_spacing = min(0.7, 5.0 / max(num_causas, 1))
-            start_offset = -((num_causas - 1) * vertical_spacing) / 2
+            # Espaciado vertical para causas
+            causa_spacing = 0.6
+            start_y = sec_end_y - ((num_causas - 1) * causa_spacing / 2)
             
             for k, (causa_txt, sub_list) in enumerate(causas_items):
-                # Offset vertical para distribuir las causas
-                y_offset = start_offset + (k * vertical_spacing)
+                causa_y = start_y + (k * causa_spacing)
+                causa_x = sec_end_x - 1.5
                 
-                # Alternancia en profundidad horizontal para mayor claridad
-                x_depth = 1.2 + (0.2 if k % 2 == 0 else 0)
-                
-                causa_x = sec_end_x - x_depth
-                causa_y = cy + y_offset
-                
-                # LÍNEA DE CAUSA (flecha pequeña)
+                # FLECHA HACIA LA CAUSA
                 ax.annotate('', 
-                           xy=(sec_end_x - 0.15, cy), 
+                           xy=(sec_end_x, sec_end_y), 
                            xytext=(causa_x, causa_y),
                            arrowprops=dict(arrowstyle='->', 
                                          color=c_lineas, 
-                                         lw=1.2, 
-                                         alpha=0.8),
+                                         lw=1, 
+                                         alpha=0.7),
                            zorder=3)
                 
                 # Texto de Causa
-                ax.text(causa_x - 0.12, causa_y, causa_txt, 
+                ax.text(causa_x - 0.1, causa_y, causa_txt, 
                        fontsize=8.5, color=c_text_causas, 
                        ha='right', va='center',
-                       bbox=dict(facecolor='black', alpha=0.2, 
+                       bbox=dict(facecolor='black', alpha=0.25, 
                                 boxstyle='round,pad=0.25'),
                        zorder=4)
                 
-                # 5. SUB-CAUSAS (Distribución en cascada)
-                num_subs = len(sub_list)
-                sub_spacing = 0.35
-                
+                # 5. SUB-CAUSAS (en línea debajo de cada causa)
                 for m, sub in enumerate(sub_list):
-                    sub_y_offset = (m + 1) * sub_spacing * (1 if is_top else -1)
-                    sub_x = causa_x - 0.4
-                    sub_y = causa_y + sub_y_offset
+                    sub_y = causa_y - ((m + 1) * 0.3)
+                    sub_x = causa_x - 0.5
                     
                     ax.text(sub_x, sub_y, f"↳ {sub}", 
                            fontsize=7.5, color=c_subs, 
@@ -206,7 +232,6 @@ if metodo == "Manual":
                 s_sub = st.text_input(f"Sub-causas (comas)", "", key=f"sub_{i}_{j}")
                 
                 if s_sec and s_cau:
-                    # AGRUPACIÓN: Si la categoría ya existe, agregar a ella
                     if s_sec not in d_sec: 
                         d_sec[s_sec] = {}
                     d_sec[s_sec][s_cau] = [s.strip() for s in s_sub.split(",") if s.strip()]
@@ -248,7 +273,6 @@ else:  # Subir Excel
                         if pd.isna(causa):
                             continue
                             
-                        # AGRUPACIÓN DE SUB-CAUSAS
                         subcausas = df_cat[df_cat['Causa'] == causa]['SubCausa'].dropna().tolist()
                         dict_causas[str(causa)] = [str(sc) for sc in subcausas]
                     
@@ -258,7 +282,6 @@ else:  # Subir Excel
                 if dict_categorias:
                     data_final[str(clasificacion)] = dict_categorias
             
-            # Mostrar preview de datos procesados
             st.success(f"✅ Datos cargados: {len(data_final)} clasificaciones procesadas")
             with st.expander("🔍 Vista previa de estructura de datos"):
                 for clasif, cats in data_final.items():
