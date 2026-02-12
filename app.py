@@ -30,13 +30,13 @@ st.markdown(f"""
     <style>
     .stApp {{ background: {bg_presets[bg_style]}; color: {text_color}; }}
     .titulo-epico {{ font-family: 'Arial Black', sans-serif; color: {text_color}; font-size: 3rem; text-align: center; margin-bottom: 0px; }}
-    .autor {{ text-align: right; font-size: 1.1rem; color: {tema_color}; font-weight: bold; margin-top: -10px; }}
-    .stButton>button {{ width: 100%; border-radius: 20px; font-weight: bold; }}
+    .autor {{ text-align: right; font-size: 1.1rem; color: {tema_color}; font-weight: bold; margin-top: -20px; }}
+    .stButton>button {{ width: 100%; border-radius: 28px; font-weight: bold; }}
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown('<h1 class="titulo-epico">ISHIKAWA ANALYTICS 4.0</h1>', unsafe_allow_html=True)
-st.markdown(f'<p class="autor">Creado por Ing. Dariel A. Peña</p>', unsafe_allow_html=True)
+st.markdown('<h1 class="titulo-epico">ISHIKAWA ANALYTICS -CENTRO PROACTIVO ANALISIS Y FALLAS C&P - REDUCCION DE AVERIAS</h1>', unsafe_allow_html=True)
+st.markdown(f'<p class="autor">Creado por:  Ing. Dariel A. Peña</p>', unsafe_allow_html=True)
 
 # --- MOTOR GRÁFICO ---
 def draw_smart_ishikawa(data_dict, title, color_theme, bg_type):
@@ -155,3 +155,4 @@ if data_final:
         st.download_button("✏️ DESCARGAR SVG (Editable)", buf_svg.getvalue(), "ishikawa_editable.svg", "image/svg+xml")
 else:
     st.info("💡 Configura los datos para generar el diagrama.")
+
