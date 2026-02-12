@@ -8,11 +8,11 @@ import matplotlib.patches as patches
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Ishikawa Analytics Pro 6.0", page_icon="📊", layout="wide")
 
-# --- BARRA LATERAL (CONTROL TOTAL) ---
+# --- BARRA LATERAL ---
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Claro.svg/1280px-Claro.svg.png", width=150)
-    st.markdown("### 🎨 ESTILO Y COLORES")
-    bg_style = st.selectbox("Estilo de Fondo", ["Cyber Dark", "Deep Ocean", "Claro Red", "Soft Gray"])
+    st.markdown("### 🎨 PERSONALIZACIÓN")
+    bg_style = st.selectbox("Estilo de Fondo", ["Cyber Dark", "Deep Ocean", "Soft Gray", "Claro Red"])
     tema_lineas = st.color_picker("Color de Espinas", "#EF3829")
     color_clasif = st.color_picker("Color Clasificaciones", "#FFFFFF")
     color_causas = st.color_picker("Color Causas", "#FFFFFF")
@@ -21,131 +21,117 @@ with st.sidebar:
     st.markdown("---")
     problema_input = st.text_area("Problema Principal (Cabeza)", "CASOS PROACTIVOS (60)")
 
-# --- DISEÑO UX/UI (MODO VISTOSO) ---
+# --- ESTILOS CSS ---
 bg_presets = {
-    "Cyber Dark": "radial-gradient(circle, #1a1a2e 0%, #0f0c29 100%)",
+    "Cyber Dark": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
     "Deep Ocean": "linear-gradient(135deg, #000428, #004e92)",
-    "Claro Red": "linear-gradient(135deg, #4d0000, #EF3829)",
-    "Soft Gray": "#f0f2f6"
+    "Soft Gray": "#f0f2f6",
+    "Claro Red": "linear-gradient(135deg, #4d0000, #EF3829)"
 }
 text_base = "white" if bg_style != "Soft Gray" else "#262730"
 
-st.markdown(f"""
-    <style>
-    .stApp {{ background: {bg_presets[bg_style]}; color: {text_base}; }}
-    .titulo-epico {{ font-family: 'Arial Black', sans-serif; text-align: center; font-size: 3.5rem; letter-spacing: -2px; margin-bottom: 0px; }}
-    .autor {{ text-align: right; font-size: 1.1rem; color: #EF3829; font-weight: bold; margin-top: -10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 5px; }}
-    </style>
-    """, unsafe_allow_html=True)
+st.markdown(f"<style>.stApp {{ background: {bg_presets[bg_style]}; color: {text_base}; }} .titulo-epico {{ font-family: 'Arial Black', sans-serif; text-align: center; color: {text_base}; font-size: 3rem; }} .autor {{ text-align: right; color: #EF3829; font-weight: bold; }}</style>", unsafe_allow_html=True)
 
 st.markdown('<h1 class="titulo-epico">ISHIKAWA ANALYTICS 6.0</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="autor">Creado por Ing. Dariel A. Peña</p>', unsafe_allow_html=True)
 
-# --- MOTOR GRÁFICO (DISTRIBUCIÓN INTELIGENTE) ---
+# --- MOTOR GRÁFICO (LÓGICA ANTI-SUPERPOSICIÓN) ---
 def draw_master_ishikawa(data_dict, title, c_lineas, c_text_causas, c_text_clasif, c_subs):
     num_cats = len(data_dict)
-    # Altura dinámica para evitar que choque
-    fig_height = max(10, 8 + (num_cats * 1.5))
+    # Altura dinámica más agresiva para dar espacio
+    fig_height = max(12, 10 + (num_cats * 2))
     fig, ax = plt.subplots(figsize=(20, fig_height), facecolor='none')
     ax.set_facecolor('none')
-    ax.set_xlim(-1, 16)
-    ax.set_ylim(-9, 9)
+    ax.set_xlim(-2, 18) # Ampliamos X para que la cabeza no se salga
+    ax.set_ylim(-10, 10)
     ax.axis('off')
 
-    # 1. Espina Dorsal (Anclaje Perfecto)
-    ax.plot([0, 12.5], [0, 0], color=c_lineas, lw=5, zorder=1, alpha=0.8)
+    # 1. Espina Dorsal (Anclaje exacto)
+    ax.plot([0, 12.5], [0, 0], color=c_lineas, lw=5, zorder=1)
 
-    # 2. Cabeza Cuadrada Redondeada (Estilo Vistoso)
-    box_head = patches.FancyBboxPatch((12.5, -2.2), 3.2, 4.4, boxstyle="round,pad=0.2,rounding_size=0.5", 
+    # 2. Cabeza (Cuadro redondeado centrado)
+    box_head = patches.FancyBboxPatch((12.5, -2.5), 4.0, 5.0, boxstyle="round,pad=0.2,rounding_size=0.5", 
                                       ec=c_lineas, fc="#d3d3d3", lw=3, zorder=3)
     ax.add_patch(box_head)
-    
-    # Auto-ajuste de fuente para el título
-    f_size_head = 12 if len(title) < 15 else 9 if len(title) < 25 else 7
-    ax.text(14.1, 0, title, fontsize=f_size_head, fontweight='black', color='black', ha='center', va='center', wrap=True)
+    ax.text(14.5, 0, title, fontsize=11, fontweight='black', color='black', ha='center', va='center', wrap=True)
 
-    # 3. Dibujo de Espinas Orgánicas (Desde cabeza hacia atrás)
     categorias = list(data_dict.keys())
     for i, cat in enumerate(categorias):
         is_top = i % 2 == 0
-        x_base = 11.5 - (int(i/2) * 4.2)
-        y_fin, x_fin = (7.0 if is_top else -7.0), (x_base - 3.5)
+        # Espaciado horizontal de las espinas principales
+        x_base = 11.5 - (int(i/2) * 4.5)
+        y_fin, x_fin = (7.5 if is_top else -7.5), (x_base - 3.5)
         
-        # Espina principal
+        # Espina Principal
         ax.plot([x_base, x_fin], [0, y_fin], color=c_lineas, lw=4, alpha=0.9)
-        ax.text(x_fin, y_fin + (0.7 if is_top else -1.0), cat, fontsize=13, fontweight='bold', color=c_text_clasif, ha='center',
-                bbox=dict(facecolor=c_lineas, edgecolor='white', boxstyle='round,pad=0.5', alpha=0.9))
+        ax.text(x_fin, y_fin + (0.8 if is_top else -1.2), cat, fontsize=13, fontweight='bold', color=c_text_clasif, 
+                ha='center', bbox=dict(facecolor=c_lineas, edgecolor='white', boxstyle='round,pad=0.5'))
 
-        # 4. Jerarquía Dinámica con ZigZag
-        cats_sec = data_dict[cat]
-        for j, (nombre_sec, causas_dict) in enumerate(cats_sec.items()):
-            r = (j + 1) / (len(cats_sec) + 1)
-            cx, cy = x_base + (x_fin - x_base) * r, 0 + (y_fin - 0) * r
+        # 3. Categorías Secundarias (Agrupadas)
+        cat_secundarias = data_dict[cat]
+        for j, (nombre_sec, causas_dict) in enumerate(cat_secundarias.items()):
+            # Distribuimos las categorías secundarias a lo largo de la espina diagonal
+            r_sec = (j + 1) / (len(cat_secundarias) + 1)
+            cx, cy = x_base + (x_fin - x_base) * r_sec, 0 + (y_fin - 0) * r_sec
             
-            # Alternar lado para evitar superposición (ZigZag)
-            side = 1 if j % 2 == 0 else -1
-            len_h = 2.2
+            # Línea horizontal de categoría
+            len_h = 2.5
+            ax.plot([cx, cx - len_h], [cy, cy], color=c_lineas, lw=2, alpha=0.8)
+            ax.text(cx - (len_h + 0.2), cy, nombre_sec, fontsize=10, color=c_text_causas, ha='right', va='center', fontweight='bold')
             
-            # Línea de Categoría secundaria
-            ax.plot([cx, cx - (len_h * side)], [cy, cy], color=c_lineas, lw=2, alpha=0.7)
-            ax.text(cx - ((len_h + 0.2) * side), cy, nombre_sec, fontsize=10, color=c_text_causas, 
-                    ha='right' if side == 1 else 'left', va='center', fontweight='black')
+            # 4. DISTRIBUCIÓN DE CAUSAS (Evita superposición)
+            causas_items = list(causas_dict.items())
+            num_causas = len(causas_items)
             
-            # 5. Causas y Sub-causas con distribución vertical
-            items_causas = list(causas_dict.items())
-            for k, (cau_txt, subs) in enumerate(items_causas):
-                # Punto de anclaje
-                v_gap = 0.5 * (1 if is_top else -1)
-                px, py = cx - (1.1 * side), cy - (k * v_gap)
+            for k, (causa_txt, sub_list) in enumerate(causas_items):
+                # Calculamos un desplazamiento vertical (offset) para cada causa dentro de la categoría
+                # Esto las separa aunque la categoría sea la misma
+                offset_v = (k - (num_causas - 1) / 2) * 0.9 * (1 if is_top else -1)
                 
-                # Línea de conexión a causa
-                ax.plot([cx - (0.3 * side), px], [cy, py], color=c_lineas, lw=0.8, alpha=0.5)
-                ax.text(px - (0.2 * side), py, cau_txt, fontsize=9, color=c_text_causas, 
-                        ha='right' if side == 1 else 'left', fontweight='semibold')
+                # Punto de inicio en la línea horizontal
+                px_start = cx - 1.2
+                py_start = cy
                 
-                # Sub-causas (Color independiente)
-                for m, sub in enumerate(subs):
-                    m_off = (m + 1) * 0.3 * (1 if is_top else -1)
-                    ax.text(px - (0.4 * side), py - m_off, f"↳ {sub}", fontsize=8, color=c_subs, 
-                            style='italic', alpha=1.0, ha='right' if side == 1 else 'left')
+                # Punto final del texto de la causa
+                px_text = cx - 2.8
+                py_text = cy + offset_v
+                
+                # Línea conector a la causa
+                ax.plot([px_start, px_text], [py_start, py_text], color=c_lineas, lw=1, alpha=0.6, linestyle='--')
+                ax.text(px_text - 0.1, py_text, causa_txt, fontsize=8, color=c_text_causas, ha='right', va='center')
+                
+                # 5. Sub-causas (Escalonadas debajo de su causa)
+                for m, sub in enumerate(sub_list):
+                    m_off = (m + 1) * 0.35 * (1 if is_top else -1)
+                    ax.text(px_text - 0.4, py_text - m_off, f"↳ {sub}", fontsize=7, color=c_subs, style='italic', ha='right')
+
     return fig
 
-# --- LÓGICA DE DATOS (FLEXIBLE E INTELIGENTE) ---
+# --- LÓGICA DE DATOS ---
 data_final = {}
-
-file = st.file_uploader("📂 Sube tu Excel (Clasificación, Categoría, Causa, Sub-Causa)", type=["xlsx"])
+file = st.file_uploader("📂 Sube el Excel (Columnas: Clasificación, Categoría, Causa, Sub-Causa)", type=["xlsx"])
 
 if file:
     df = pd.read_excel(file)
-    # Limpieza automática de columnas por posición (inmune a nombres mal escritos)
+    # Limpieza automática: tomamos las primeras 4 columnas sin importar el nombre exacto
     if len(df.columns) >= 4:
-        df.columns = ["CLASIF", "CAT", "CAU", "SUB"]
-        for cl, df_cl in df.groupby("CLASIF"):
+        # Agrupamos jerárquicamente: Clasif -> Cat -> Causa -> Subcausa
+        for cl, df_cl in df.groupby(df.columns[0]):
             dict_cl = {}
-            for cat_s, df_cat in df_cl.groupby("CAT"):
+            for cat_s, df_cat in df_cl.groupby(df.columns[1]):
                 dict_cau = {}
-                for cau, df_cau in df_cat.groupby("CAU"):
-                    dict_cau[cau] = df_cau["SUB"].dropna().tolist()
+                for cau, df_cau in df_cat.groupby(df.columns[2]):
+                    dict_cau[cau] = df_cau.iloc[:, 3].dropna().tolist()
                 dict_cl[cat_s] = dict_cau
             data_final[cl] = dict_cl
-    else:
-        st.error("⚠️ El Excel necesita al menos 4 columnas.")
 
 # --- RENDERIZADO ---
 if data_final:
-    st.markdown("### 🔍 Análisis de Causa Raíz Visual")
     fig_master = draw_master_ishikawa(data_final, problema_input, tema_lineas, color_causas, color_clasif, color_subs)
     st.pyplot(fig_master, transparent=True)
     
-    # Botones de Descarga
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        buf_png = BytesIO()
-        fig_master.savefig(buf_png, format="png", dpi=350, transparent=True)
-        st.download_button("📥 DESCARGAR PNG (ALTA RES)", buf_png.getvalue(), "ishikawa_pro.png", "image/png")
-    with col_d2:
-        buf_svg = BytesIO()
-        fig_master.savefig(buf_svg, format="svg", transparent=True)
-        st.download_button("✏️ DESCARGAR SVG (POWERPOINT)", buf_svg.getvalue(), "ishikawa_editable.svg", "image/svg+xml")
-else:
-    st.info("💡 Sube un archivo Excel para generar automáticamente tu análisis de espina de pescado.")
+    buf = BytesIO(); fig_master.savefig(buf, format="png", dpi=350, transparent=True)
+    st.download_button("📥 DESCARGAR PNG", buf.getvalue(), "ishikawa.png", "image/png")
+    
+    buf_svg = BytesIO(); fig_master.savefig(buf_svg, format="svg", transparent=True)
+    st.download_button("✏️ DESCARGAR SVG EDITABLE", buf_svg.getvalue(), "ishikawa_edit.svg", "image/svg+xml")
